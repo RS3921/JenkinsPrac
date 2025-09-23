@@ -2,7 +2,7 @@
 <head><title>Trivy Vulnerability Report</title></head>
 <body>
 <h1>Trivy Vulnerability Report</h1>
-{{ range .Artifacts }}
+{{ range .Results }}
   <h2>Target: {{ .Target }}</h2>
   {{ if .Vulnerabilities }}
   <table border="1">
