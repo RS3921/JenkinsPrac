@@ -1,30 +1,77 @@
-import json, html
+import json
+import sys
+import os
 
-with open("reports/trivy-report.json") as f:
-    data = json.load(f)
+def convert_trivy_json_to_html(input_file, output_file):
+    # Ensure input file exists
+    if not os.path.exists(input_file):
+        print(f"❌ Input file not found: {input_file}")
+        sys.exit(1)
 
-html_content = "<html><head><title>Trivy Report</title></head><body>"
-html_content += "<h1>Trivy Vulnerability Report</h1>"
+    # Load Trivy JSON report
+    with open(input_file, "r") as f:
+        data = json.load(f)
 
-for result in data.get("Results", []):
-    target = result.get("Target", "Unknown")
-    html_content += f"<h2>Target: {html.escape(target)}</h2>"
-    vulnerabilities = result.get("Vulnerabilities", [])
-    if vulnerabilities:
-        html_content += "<table border='1'><tr><th>ID</th><th>PkgName</th><th>Installed Version</th><th>Severity</th><th>Description</th></tr>"
-        for vuln in vulnerabilities:
-            html_content += "<tr>"
-            html_content += f"<td>{html.escape(vuln.get('VulnerabilityID',''))}</td>"
-            html_content += f"<td>{html.escape(vuln.get('PkgName',''))}</td>"
-            html_content += f"<td>{html.escape(vuln.get('InstalledVersion',''))}</td>"
-            html_content += f"<td>{html.escape(vuln.get('Severity',''))}</td>"
-            html_content += f"<td>{html.escape(vuln.get('Description',''))}</td>"
-            html_content += "</tr>"
-        html_content += "</table>"
-    else:
-        html_content += "<p>No vulnerabilities found.</p>"
+    # Start building HTML
+    html = """
+    <html>
+    <head>
+        <title>Trivy Scan Report</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1 { color: #2c3e50; }
+            table { border-collapse: collapse; width: 100%; }
+            th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+            th { background-color: #f4f4f4; }
+            tr:nth-child(even) { background-color: #f9f9f9; }
+        </style>
+    </head>
+    <body>
+        <h1>Trivy Scan Report</h1>
+        <table>
+            <tr>
+                <th>Vulnerability ID</th>
+                <th>Pkg Name</th>
+                <th>Installed Version</th>
+                <th>Fixed Version</th>
+                <th>Severity</th>
+                <th>Title</th>
+            </tr>
+    """
 
-html_content += "</body></html>"
+    # Parse vulnerabilities
+    for result in data.get("Results", []):
+        for vuln in result.get("Vulnerabilities", []):
+            html += f"""
+            <tr>
+                <td>{vuln.get('VulnerabilityID', '')}</td>
+                <td>{vuln.get('PkgName', '')}</td>
+                <td>{vuln.get('InstalledVersion', '')}</td>
+                <td>{vuln.get('FixedVersion', '')}</td>
+                <td>{vuln.get('Severity', '')}</td>
+                <td>{vuln.get('Title', '')}</td>
+            </tr>
+            """
 
-with open("reports/trivy-report.html", "w") as f:
-    f.write(html_content)
+    html += """
+        </table>
+    </body>
+    </html>
+    """
+
+    # Write output HTML
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    with open(output_file, "w", encoding="utf-8") as f:
+        f.write(html)
+
+    print(f"✅ HTML report generated at {output_file}")
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print("Usage: python trivy_json_to_html.py <input_json> <output_html>")
+        sys.exit(1)
+
+    input_file = sys.argv[1]
+    output_file = sys.argv[2]
+    convert_trivy_json_to_html(input_file, output_file)
