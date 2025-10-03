@@ -1,95 +1,30 @@
-import json
-import sys
-from jinja2 import Template
+import json, html
 
-# -----------------------------
-# Input arguments
-# -----------------------------
-if len(sys.argv) != 3:
-    print("Usage: python trivy_json_to_html.py <input_json> <output_html>")
-    sys.exit(1)
+with open("reports/trivy-report.json") as f:
+    data = json.load(f)
 
-json_file = sys.argv[1]
-html_file = sys.argv[2]
+html_content = "<html><head><title>Trivy Report</title></head><body>"
+html_content += "<h1>Trivy Vulnerability Report</h1>"
 
-# -----------------------------
-# Load Trivy JSON report
-# -----------------------------
-try:
-    with open(json_file, "r", encoding="utf-8") as f:
-        data = json.load(f)
-except FileNotFoundError:
-    print(f"❌ JSON file not found: {json_file}")
-    sys.exit(1)
+for result in data.get("Results", []):
+    target = result.get("Target", "Unknown")
+    html_content += f"<h2>Target: {html.escape(target)}</h2>"
+    vulnerabilities = result.get("Vulnerabilities", [])
+    if vulnerabilities:
+        html_content += "<table border='1'><tr><th>ID</th><th>PkgName</th><th>Installed Version</th><th>Severity</th><th>Description</th></tr>"
+        for vuln in vulnerabilities:
+            html_content += "<tr>"
+            html_content += f"<td>{html.escape(vuln.get('VulnerabilityID',''))}</td>"
+            html_content += f"<td>{html.escape(vuln.get('PkgName',''))}</td>"
+            html_content += f"<td>{html.escape(vuln.get('InstalledVersion',''))}</td>"
+            html_content += f"<td>{html.escape(vuln.get('Severity',''))}</td>"
+            html_content += f"<td>{html.escape(vuln.get('Description',''))}</td>"
+            html_content += "</tr>"
+        html_content += "</table>"
+    else:
+        html_content += "<p>No vulnerabilities found.</p>"
 
-# -----------------------------
-# HTML template with table format
-# -----------------------------
-template_str = """
-<html>
-<head>
-    <title>Trivy Security Report</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        h1, h2, h3 { color: #2E4053; }
-        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        .low { background-color: #d4edda; }
-        .medium { background-color: #fff3cd; }
-        .high { background-color: #f8d7da; }
-        .critical { background-color: #f5c6cb; }
-        .na { background-color: #e2e3e5; }
-    </style>
-</head>
-<body>
-    <h1>Trivy Security Report</h1>
-    <h2>Image: {{ image_name }}</h2>
+html_content += "</body></html>"
 
-    {% for result in results %}
-        <h3>Target: {{ result.Target }}</h3>
-        {% if result.Vulnerabilities %}
-        <table>
-            <tr>
-                <th>Vulnerability ID</th>
-                <th>Package Name</th>
-                <th>Installed Version</th>
-                <th>Severity</th>
-                <th>Fixed Version</th>
-                <th>Description</th>
-            </tr>
-            {% for vuln in result.Vulnerabilities %}
-            <tr class="{{ vuln.Severity|lower if vuln.Severity else 'na' }}">
-                <td>{{ vuln.VulnerabilityID }}</td>
-                <td>{{ vuln.PkgName }}</td>
-                <td>{{ vuln.InstalledVersion }}</td>
-                <td>{{ vuln.Severity or 'N/A' }}</td>
-                <td>{{ vuln.FixedVersion or 'N/A' }}</td>
-                <td>{{ vuln.Description }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-        {% else %}
-            <p>No vulnerabilities found for this target ✅</p>
-        {% endif %}
-    {% endfor %}
-</body>
-</html>
-"""
-
-# -----------------------------
-# Render HTML
-# -----------------------------
-template = Template(template_str)
-html_content = template.render(
-    image_name=data.get("ArtifactName", "Docker Image"),
-    results=data.get("Results", [])
-)
-
-# -----------------------------
-# Save HTML file
-# -----------------------------
-with open(html_file, "w", encoding="utf-8") as f:
+with open("reports/trivy-report.html", "w") as f:
     f.write(html_content)
-
-print(f"✅ Detailed HTML report generated at: {html_file}")
