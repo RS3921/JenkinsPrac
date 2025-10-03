@@ -1,6 +1,6 @@
 import json, html
 
-with open("reports/trivy-report.json") as f:
+with open("reports/trivy_report.json") as f:
     data = json.load(f)
 
 html_content = "<html><head><title>Trivy Report</title></head><body>"
