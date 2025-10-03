@@ -26,5 +26,5 @@ for result in data.get("Results", []):
 
 html_content += "</body></html>"
 
-with open("reports/trivy-report.html", "w") as f:
+with open("reports/trivy_report.html", "w") as f:
     f.write(html_content)
