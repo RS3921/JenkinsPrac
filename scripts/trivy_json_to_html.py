@@ -7,7 +7,14 @@ from jinja2 import Template
 # -----------------------------
 workspace_dir = r"C:\ProgramData\Jenkins\.jenkins\workspace\Security Testing Skill 4"
 reports_dir = os.path.join(workspace_dir, "reports")
-json_file = os.path.join(reports_dir, "trivy-report.json")  # Correct file name
+
+# Automatically detect Trivy JSON report
+json_files = [f for f in os.listdir(reports_dir) if f.endswith(".json") and "trivy-report" in f]
+if not json_files:
+    raise FileNotFoundError(f"No Trivy JSON report found in {reports_dir}")
+json_file = os.path.join(reports_dir, json_files[0])
+
+# Set HTML output path
 html_file = os.path.join(reports_dir, "trivy-report.html")
 
 # -----------------------------
@@ -64,7 +71,7 @@ template_str = """
             {% endfor %}
         </table>
         {% else %}
-            <p>No vulnerabilities found for this target ✅</p>
+            <p>No vulnerabilities found for this target</p>
         {% endif %}
     {% endfor %}
 </body>
@@ -86,4 +93,4 @@ html_content = template.render(
 with open(html_file, "w", encoding="utf-8") as f:
     f.write(html_content)
 
-print(f"✅ Detailed HTML report generated at: {html_file}")
+print(f"Detailed HTML report generated at: {html_file}")
